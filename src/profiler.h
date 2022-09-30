@@ -21,6 +21,9 @@ class SignalHandler {
 struct TraceData {
   std::atomic<intptr_t> count;
   JVMPI_CallTrace trace;
+  TraceData() = default;
+  TraceData(TraceData const&) = default;
+
 };
 
 class Profiler {

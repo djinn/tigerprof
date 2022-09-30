@@ -11,14 +11,13 @@ ifeq ($(UNAME), darwin)
   PLATFORM_COPTS:=-std=c++20 -stdlib=libc++ -DTARGET_RT_MAC_CFM=0
   HEADERS:=include
   CC=clang++
-  LDFLAGS=-Wl,-fatal_warnings -Wl,-std=c++20 -Wl,-stdlib=libc++
-  
+  LDFLAGS=-Wl,-fatal_warnings -Wl,-std=c++20 -Wl,-stdlib=libc++  
 else ifeq ($(UNAME), linux)
   READLINK_ARGS:="-f"
-  PLATFORM_COPTS:=-mfpmath=sse -std=c++20
+  PLATFORM_COPTS:= -std=c++20
   PLATFORM_WARNINGS:=-Wframe-larger-than=16384 -Wno-unused-but-set-variable \
     -Wunused-but-set-parameter -Wvla -Wno-conversion-null \
-    -Wno-builtin-macro-redefined -Wno-global-constructors
+    -Wno-builtin-macro-redefined -Wno-class-memaccess
   HEADERS:=include
   CC=g++
   LDFLAGS=-Wl,--fatal-warnings -stdlib=libstdc++
@@ -40,13 +39,15 @@ GLOBAL_WARNINGS=-Wall -Werror -Wformat-security -Wno-char-subscripts \
 	-Woverloaded-virtual
 GLOBAL_COPTS=-fdiagnostics-show-option -fno-exceptions \
 	-fno-omit-frame-pointer -fno-strict-aliasing -funsigned-char \
-	-fno-asynchronous-unwind-tables -m$(BITS) -msse2 -g \
+	-fno-asynchronous-unwind-tables -g \
 	-D__STDC_FORMAT_MACROS
 COPTS:=$(PLATFORM_COPTS) $(GLOBAL_COPTS) $(PLATFORM_WARNINGS) \
 	$(GLOBAL_WARNINGS) $(OPT)
 
-INCLUDES=-I$(JAVA_HOME)/$(HEADERS)
-
+INCLUDES=-I$(JAVA_HOME)/$(HEADERS) 
+ifeq ($(UNAME), linux)
+INCLUDES=-I$(JAVA_HOME)/$(HEADERS) -I$(JAVA_HOME)/$(HEADERS)/linux
+endif
 
 # LDFLAGS+=-Wl,--export-dynamic-symbol=Agent_OnLoad
 
