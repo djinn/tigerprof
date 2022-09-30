@@ -12,6 +12,7 @@
 // non-standard.
 #include <map>
 #include <vector>
+#include <atomic>
 
 void StackTracesPrinter::PrintStackTraces(TraceData *traces, int length) {
   int count = 0;
@@ -20,7 +21,7 @@ void StackTracesPrinter::PrintStackTraces(TraceData *traces, int length) {
     if (traces[i].count != 0) {
       total += traces[i].count;
       count++;
-      fprintf(file_, "%" PRIdPTR " ", traces[i].count);
+      fprintf(file_, "%" PRIdPTR " ", traces[i].count.load());
       PrintStackTrace(&traces[i]);
       fprintf(file_, "\n");
     }
@@ -69,7 +70,7 @@ void StackTracesPrinter::PrintLeafHistogram(TraceData *traces, int length) {
   std::sort(sorted_methods.begin(), sorted_methods.end(), sorter);
 
   JVMPI_CallFrame last;
-  last.method_id = NULL;
+  last.method_id = nullptr;
   last.lineno = 0;
 
   for (auto method = sorted_methods.begin(); method != sorted_methods.end(); ++ method) {
@@ -157,8 +158,8 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
   JvmtiScopedPtr<char> name_ptr(jvmti_);
 
   // Get method name, put it in name_ptr
-  if ((error = jvmti_->GetMethodName(frame->method_id, name_ptr.GetRef(), NULL,
-                                     NULL)) !=
+  if ((error = jvmti_->GetMethodName(frame->method_id, name_ptr.GetRef(), nullptr,
+                                     nullptr)) !=
       JVMTI_ERROR_NONE) {
     name_ptr.AbandonBecauseOfError();
     if (error == JVMTI_ERROR_INVALID_METHODID) {
@@ -184,7 +185,7 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
 
   JvmtiScopedPtr<char> signature_ptr2(jvmti_);
   JVMTI_ERROR_CLEANUP_1(
-      jvmti_->GetClassSignature(declaring_class, signature_ptr2.GetRef(), NULL),
+      jvmti_->GetClassSignature(declaring_class, signature_ptr2.GetRef(), nullptr),
       false, signature_ptr2.AbandonBecauseOfError());
 
   // Get source file, put it in source_name_ptr
@@ -206,7 +207,7 @@ bool StackTracesPrinter::GetStackFrameElements(JVMPI_CallFrame *frame,
   *method_name = name_ptr.Get();
   *file_name = filename;
 
-  if (line_number != NULL) {
+  if (line_number != nullptr) {
     // TODO(jeremymanson): is frame->lineno correct?  GetLineNumber
     // expects a BCI.
     *line_number = GetLineNumber(frame->method_id, frame->lineno);

@@ -73,15 +73,17 @@ class JvmtiScopedPtr {
  public:
   explicit JvmtiScopedPtr(jvmtiEnv *jvmti)
       : jvmti_(jvmti),
-        ref_(NULL) {}
+        ref_(nullptr) {}
 
   JvmtiScopedPtr(jvmtiEnv *jvmti, T *ref)
       : jvmti_(jvmti),
         ref_(ref) {}
 
   ~JvmtiScopedPtr() {
-    if (NULL != ref_) {
-      JVMTI_ERROR(jvmti_->Deallocate((unsigned char *)ref_));
+    if (nullptr != ref_) {
+      //unsigned char *ref__ = dynamic_cast<char *>(ref_);
+      JVMTI_ERROR(jvmti_->Deallocate(reinterpret_cast<unsigned char *> (ref_)));
+      //JVMTI_ERROR(jvmti_->Deallocate((unsigned char *)ref_);
     }
   }
 
@@ -95,7 +97,7 @@ class JvmtiScopedPtr {
   }
 
   void AbandonBecauseOfError() {
-    ref_ = NULL;
+    ref_ = nullptr;
   }
 
  private:
@@ -127,7 +129,7 @@ class Accessors {
   }
 
   static void Init() {
-    if (pthread_key_create(&key_, NULL) != 0) {
+    if (pthread_key_create(&key_, nullptr) != 0) {
       perror("Unable to init thread-local storage.  Profiling won't work:");
     }
   }
@@ -157,8 +159,8 @@ class Accessors {
   static inline FunctionType GetJvmFunction(const char *function_name) {
     // get handle to library
     static void *handle = dlopen("libjvm.so", RTLD_LAZY);
-    if (handle == NULL) {
-      return NULL;
+    if (handle == nullptr) {
+      return nullptr;
     }
 
     // get address of function, return null if not found
@@ -178,43 +180,6 @@ class Accessors {
   static __thread JNIEnv *env_;
 #endif
 };
-
-#if defined(__GNUC__) && (defined(i386) || defined(__x86_64))
-#if defined(__x86_64__)
-#define __CAS_INSTR "lock; cmpxchgq %1,%2"
-#define __ADD_INSTR "lock; xaddq %0,%1"
-#else  // defined(__x86_64__)
-#define __CAS_INSTR "lock; cmpxchgl %1,%2"
-#define __ADD_INSTR "lock; xaddl %0,%1"
-#endif  // defined(__x86_64__)
-#else  // defined(__GNUC__) && (defined(i386) || defined(__x86_64))
-#error \
-    "Cannot compile with non-x86.  Add support for atomic ops, if you want it"
-#endif  // defined(__GNUC__) && (defined(i386) || defined(__x86_64))
-
-inline intptr_t NoBarrier_CompareAndSwap(volatile intptr_t *ptr,
-                                         intptr_t old_value,
-                                         intptr_t new_value) {
-  intptr_t prev;
-  __asm__ __volatile__(__CAS_INSTR
-                       : "=a"(prev)
-                       : "q"(new_value), "m"(*ptr), "0"(old_value)
-                       : "cc", "memory");
-  return prev;
-}
-
-inline intptr_t NoBarrier_AtomicIncrement(volatile intptr_t* ptr,
-                                          intptr_t increment) {
-  intptr_t temp = increment;
-  __asm__ __volatile__(__ADD_INSTR
-                       : "+r" (temp), "+m" (*ptr)
-                       : : "cc", "memory");
-  // temp now contains the previous value of *ptr
-  return temp + increment;
-}
-
-#undef __CAS_INSTR
-#undef __ADD_INSTR
 
 // Things that should probably be user-configurable
 

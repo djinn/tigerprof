@@ -45,7 +45,7 @@ void CreateJMethodIDsForClass(jvmtiEnv *jvmti, jclass klass) {
     // JVMTI_ERROR_CLASS_NOT_PREPARED is okay because some classes may
     // be loaded but not prepared at this point.
     JvmtiScopedPtr<char> ksig(jvmti);
-    JVMTI_ERROR((jvmti->GetClassSignature(klass, ksig.GetRef(), NULL)));
+    JVMTI_ERROR((jvmti->GetClassSignature(klass, ksig.GetRef(), nullptr)));
     fprintf(
         stderr,
         "Failed to create method IDs for methods in class %s with error %d ",
@@ -155,7 +155,7 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
   // Events are enumerated in jvmstatagent.h
   for (int i = 0; i < num_events; i++) {
     JVMTI_ERROR_1(
-        (jvmti->SetEventNotificationMode(JVMTI_ENABLE, events[i], NULL)),
+        (jvmti->SetEventNotificationMode(JVMTI_ENABLE, events[i], nullptr)),
         false);
   }
 
@@ -167,7 +167,7 @@ static bool RegisterJvmti(jvmtiEnv *jvmti) {
 static void SetFileFromOption(char *equals) {
   char *name_begin = equals + 1;
   char *name_end;
-  if ((name_end = strchr(equals, ',')) == NULL) {
+  if ((name_end = strchr(equals, ',')) == nullptr) {
     name_end = equals + strlen(equals);
   }
   size_t len = POSITIVE(name_end - name_begin);
@@ -182,9 +182,9 @@ static void SetFileFromOption(char *equals) {
     Globals::OutFile = stdout;
   } else {
     Globals::OutFile = fopen(file_name, "w+");
-    if (Globals::OutFile == NULL) {
+    if (Globals::OutFile == nullptr) {
       fprintf(stderr, "Could not open file %s: ", file_name);
-      perror(NULL);
+      perror(nullptr);
       exit(1);
     }
   }
@@ -194,10 +194,10 @@ static void SetFileFromOption(char *equals) {
 
 static void ParseArguments(char *options) {
   char *key = options;
-  for (char *next = options; next != NULL;
+  for (char *next = options; next != nullptr;
        next = strchr((key = next + 1), ',')) {
     char *equals = strchr(key, '=');
-    if (equals == NULL) {
+    if (equals == nullptr) {
       fprintf(stderr, "No value for key %s\n", key);
       continue;
     }
@@ -206,9 +206,9 @@ static void ParseArguments(char *options) {
     }
   }
 
-  if (Globals::OutFile == NULL) {
+  if (Globals::OutFile == nullptr) {
     char path[PATH_MAX];
-    if (getcwd(path, PATH_MAX) == NULL) {
+    if (getcwd(path, PATH_MAX) == nullptr) {
       fprintf(stderr, "cwd too long?\n");
       exit(0);
     }

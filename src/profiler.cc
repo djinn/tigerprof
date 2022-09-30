@@ -4,8 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <atomic>
 
 #include "display.h"
+
 
 #ifdef __APPLE__
 // See comment in Accessors class
@@ -59,7 +61,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
   ErrnoRaii err_storage;  // stores and resets errno
 
   JNIEnv *env = Accessors::CurrentJniEnv();
-  if (env == NULL) {
+  if (env == nullptr) {
     // native / JIT / GC thread, which isn't attached to the JVM.
     failures_[0]++;
     return;
@@ -95,9 +97,39 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
   uint64_t idx = hash_val % kMaxStackTraces;
 
   uint64_t i = idx;
+  long val1 = 0; long val2 = 1;
+  
 
   do {
-    intptr_t *count = &(traces_[i].count);
+    std::atomic<intptr_t > *count = &traces_[i].count;
+    //intptr_t *count = &(traces_[i].count);
+    if (*count == 0 && count->compare_exchange_weak(val1, val2, std::memory_order_relaxed) == false) {
+      JVMPI_CallFrame *fb = frame_buffer_[i];
+      for (int frame_num = 0; frame_num < trace.num_frames; ++frame_num) {
+        base = reinterpret_cast<char *>(&(fb[frame_num]));
+        // Make sure the padding is all set to 0.
+        for (char *p = base; p < base + sizeof(JVMPI_CallFrame); p++) {
+          *p = 0;
+        }
+        fb[frame_num].lineno = trace.frames[frame_num].lineno;
+        fb[frame_num].method_id = trace.frames[frame_num].method_id;
+      }
+
+      traces_[i].trace.frames = fb;
+      traces_[i].trace.num_frames = trace.num_frames;
+      return;
+    }
+
+    if ((traces_[i].trace.num_frames == trace.num_frames) &&
+        (memcmp(traces_[i].trace.frames, trace.frames,
+                sizeof(JVMPI_CallFrame) * kMaxFramesToCapture) == 0)) {
+      count->fetch_add(1, std::memory_order_relaxed);
+      //NoBarrier_AtomicIncrement(&(traces_[i].count), 1);
+      return;
+    }
+
+    /*
+
     if (*count == 0 && (NoBarrier_CompareAndSwap(count, 0, 1) == 0)) {
       // memcpy is not async safe
       JVMPI_CallFrame *fb = frame_buffer_[i];
@@ -121,7 +153,7 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
                 sizeof(JVMPI_CallFrame) * kMaxFramesToCapture) == 0)) {
       NoBarrier_AtomicIncrement(&(traces_[i].count), 1);
       return;
-    }
+    } */
 
     i = (i + 1) % kMaxStackTraces;
   } while (i != idx);
@@ -134,7 +166,7 @@ bool SignalHandler::SetSigprofInterval(int sec, int usec) {
   timer.it_interval.tv_sec = sec;
   timer.it_interval.tv_usec = usec;
   timer.it_value = timer.it_interval;
-  if (setitimer(ITIMER_PROF, &timer, 0) == -1) {
+  if (setitimer(ITIMER_PROF, &timer, nullptr) == -1) {
     fprintf(stderr, "Scheduling profiler interval failed with error %d\n",
             errno);
     return false;
@@ -145,7 +177,7 @@ bool SignalHandler::SetSigprofInterval(int sec, int usec) {
 struct sigaction SignalHandler::SetAction(void (*action)(int, siginfo_t *,
                                                          void *)) {
   struct sigaction sa;
-  sa.sa_handler = NULL;
+  sa.sa_handler = nullptr;
   sa.sa_sigaction = action;
   sa.sa_flags = SA_RESTART | SA_SIGINFO;
 

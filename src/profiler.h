@@ -1,5 +1,5 @@
 #include <signal.h>
-
+#include <atomic>
 #include "globals.h"
 #include "stacktraces.h"
 
@@ -19,7 +19,7 @@ class SignalHandler {
 };
 
 struct TraceData {
-  intptr_t count;
+  std::atomic<intptr_t> count;
   JVMPI_CallTrace trace;
 };
 
