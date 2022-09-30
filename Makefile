@@ -30,7 +30,7 @@ JAVA_HOME := $(shell \
 	[[ "$${JAVA_HOME}" =~ /jre/ ]] && JAVA_HOME=$${JAVA_HOME}/../; \
 	[[ -n "$${JAVA_HOME}" ]] || (echo "Cannot find JAVA_HOME" && exit) ; \
 	echo $${JAVA_HOME})
-AGENT=libtigerprof.o
+AGENT=libtigerprof.so
 LIBS=-ldl
 BUILD_DIR ?= $(shell mkdir build 2> /dev/null ; echo build)
 SRC_DIR:=${PWD}/src
