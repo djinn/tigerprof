@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <atomic>
-
+#include <iostream>
 #include "display.h"
 
 
@@ -16,7 +16,7 @@ pthread_key_t Accessors::key_;
 __thread JNIEnv * Accessors::env_;
 #endif
 
-ASGCTType Asgct::asgct_;
+ASGCTType *Asgct::asgct_;
 
 TraceData Profiler::traces_[kMaxStackTraces];
 
@@ -61,11 +61,13 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
   ErrnoRaii err_storage;  // stores and resets errno
 
   JNIEnv *env = Accessors::CurrentJniEnv();
+
   if (env == nullptr) {
     // native / JIT / GC thread, which isn't attached to the JVM.
     failures_[0]++;
     return;
   }
+
 
   JVMPI_CallTrace trace;
   JVMPI_CallFrame frames[kMaxFramesToCapture];
@@ -81,8 +83,12 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
 
   trace.frames = frames;
   trace.env_id = env;
-
-  ASGCTType asgct = Asgct::GetAsgct();
+  
+  
+  ASGCTType *asgct = Asgct::GetAsgct();
+  if(asgct == nullptr) {
+    std::cout << asgct << std::endl;
+  }
   (*asgct)(&trace, kMaxFramesToCapture, context);
 
   if (trace.num_frames < 0) {
@@ -124,37 +130,8 @@ void Profiler::Handle(int signum, siginfo_t *info, void *context) {
         (memcmp(traces_[i].trace.frames, trace.frames,
                 sizeof(JVMPI_CallFrame) * kMaxFramesToCapture) == 0)) {
       count->fetch_add(1, std::memory_order_relaxed);
-      //NoBarrier_AtomicIncrement(&(traces_[i].count), 1);
       return;
     }
-
-    /*
-
-    if (*count == 0 && (NoBarrier_CompareAndSwap(count, 0, 1) == 0)) {
-      // memcpy is not async safe
-      JVMPI_CallFrame *fb = frame_buffer_[i];
-      for (int frame_num = 0; frame_num < trace.num_frames; ++frame_num) {
-        base = reinterpret_cast<char *>(&(fb[frame_num]));
-        // Make sure the padding is all set to 0.
-        for (char *p = base; p < base + sizeof(JVMPI_CallFrame); p++) {
-          *p = 0;
-        }
-        fb[frame_num].lineno = trace.frames[frame_num].lineno;
-        fb[frame_num].method_id = trace.frames[frame_num].method_id;
-      }
-
-      traces_[i].trace.frames = fb;
-      traces_[i].trace.num_frames = trace.num_frames;
-      return;
-    }
-
-    if ((traces_[i].trace.num_frames == trace.num_frames) &&
-        (memcmp(traces_[i].trace.frames, trace.frames,
-                sizeof(JVMPI_CallFrame) * kMaxFramesToCapture) == 0)) {
-      NoBarrier_AtomicIncrement(&(traces_[i].count), 1);
-      return;
-    } */
-
     i = (i + 1) % kMaxStackTraces;
   } while (i != idx);
 }

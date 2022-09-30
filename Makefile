@@ -7,7 +7,7 @@ ifeq ($(UNAME), darwin)
   READLINK_ARGS:=""
   PLATFORM_WARNINGS:=-Weverything -Wno-c++98-compat-pedantic -Wno-padded \
 	-Wno-missing-prototypes -Wno-poison-system-directories \
-	-Wno-global-constructors
+	-Wno-global-constructors -Wno-unused-variable
   PLATFORM_COPTS:=-std=c++20 -stdlib=libc++ -DTARGET_RT_MAC_CFM=0
   HEADERS:=include
   CC=clang++
@@ -36,7 +36,7 @@ SRC_DIR:=${PWD}/src
 OPT?=-O2
 GLOBAL_WARNINGS=-Wall -Werror -Wformat-security -Wno-char-subscripts \
 	-Wno-sign-compare -Wno-strict-overflow -Wwrite-strings -Wnon-virtual-dtor \
-	-Woverloaded-virtual
+	-Woverloaded-virtual -Wno-unused-variable
 GLOBAL_COPTS=-fdiagnostics-show-option -fno-exceptions \
 	-fno-omit-frame-pointer -fno-strict-aliasing -funsigned-char \
 	-fno-asynchronous-unwind-tables -g \

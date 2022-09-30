@@ -2,7 +2,7 @@
 #include <limits.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <iostream>
 #include <string>
 
 #include "globals.h"
@@ -246,7 +246,6 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options,
     // inconsistent state.
     return 1;
   }
-
   Asgct::SetAsgct(Accessors::GetJvmFunction<ASGCTType>("AsyncGetCallTrace"));
 
   prof = new Profiler(jvmti);
